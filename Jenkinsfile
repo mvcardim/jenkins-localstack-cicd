@@ -26,7 +26,7 @@ pipeline {
 
         stage('Verificar LocalStack') {
             steps {
-                sh 'curl -sf ${LOCALSTACK_ENDPOINT}/_localstack/health | python3 -m json.tool'
+                sh 'curl -sf ${LOCALSTACK_ENDPOINT}/_localstack/health && echo "LocalStack OK!"'
             }
         }
 
