@@ -1,0 +1,86 @@
+pipeline {
+    agent any
+
+    environment {
+        LOCALSTACK_ENDPOINT   = "http://127.0.0.1:14566"
+        AWS_ACCESS_KEY_ID     = "test"
+        AWS_SECRET_ACCESS_KEY = "test"
+        AWS_DEFAULT_REGION    = "us-east-1"
+    }
+
+    parameters {
+        choice(
+            name: 'ACTION',
+            choices: ['plan', 'apply', 'destroy'],
+            description: 'Ação Terraform'
+        )
+    }
+
+    stages {
+
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
+        }
+
+        stage('Verificar LocalStack') {
+            steps {
+                sh 'curl -sf ${LOCALSTACK_ENDPOINT}/_localstack/health | python3 -m json.tool'
+            }
+        }
+
+        stage('Terraform Init') {
+            steps {
+                dir('terraform') {
+                    sh 'terraform init -input=false'
+                }
+            }
+        }
+
+        stage('Terraform Plan') {
+            steps {
+                dir('terraform') {
+                    sh 'terraform plan -out=tfplan -input=false'
+                }
+            }
+        }
+
+        stage('Terraform Apply / Destroy') {
+            when { expression { params.ACTION in ['apply', 'destroy'] } }
+            steps {
+                dir('terraform') {
+                    script {
+                        if (params.ACTION == 'apply') {
+                            sh 'terraform apply -auto-approve tfplan'
+                        } else {
+                            sh 'terraform destroy -auto-approve'
+                        }
+                    }
+                }
+            }
+        }
+
+        stage('Verificar Recursos') {
+            when { expression { params.ACTION == 'apply' } }
+            steps {
+                sh '''
+                    echo "=== Buckets S3 ==="
+                    aws --endpoint-url=${LOCALSTACK_ENDPOINT} --profile localstack s3 ls
+
+                    echo "=== Filas SQS ==="
+                    aws --endpoint-url=${LOCALSTACK_ENDPOINT} --profile localstack sqs list-queues
+
+                    echo "=== Tabelas DynamoDB ==="
+                    aws --endpoint-url=${LOCALSTACK_ENDPOINT} --profile localstack dynamodb list-tables
+                '''
+            }
+        }
+    }
+
+    post {
+        success { echo "✅ Pipeline finalizada com sucesso!" }
+        failure { echo "❌ Pipeline falhou!" }
+        always  { cleanWs() }
+    }
+}
