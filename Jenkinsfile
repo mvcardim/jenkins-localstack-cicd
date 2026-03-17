@@ -30,6 +30,33 @@ pipeline {
             }
         }
 
+        stage('Lint Terraform') {
+            steps {
+                dir('terraform') {
+                    sh '''
+                        echo "=== Inicializando tflint ==="
+                        tflint --init
+
+                        echo "=== Executando tflint ==="
+                        tflint --format=compact
+                        echo "✅ Lint Terraform OK!"
+                    '''
+                }
+            }
+        }
+
+        stage('Terraform Validate') {
+            steps {
+                dir('terraform') {
+                    sh '''
+                        terraform init -input=false -backend=false
+                        terraform validate
+                        echo "✅ Terraform Validate OK!"
+                    '''
+                }
+            }
+        }
+
         stage('Terraform Init') {
             steps {
                 dir('terraform') {
