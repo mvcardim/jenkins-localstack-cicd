@@ -39,7 +39,19 @@ pipeline {
 
                         echo "=== Executando tflint ==="
                         tflint --format=compact
-                        echo "✅ Lint Terraform OK!"
+                        echo "✅ Lint OK!"
+                    '''
+                }
+            }
+        }
+
+        stage('Segurança - tfsec') {
+            steps {
+                dir('terraform') {
+                    sh '''
+                        echo "=== Executando tfsec ==="
+                        tfsec . --no-color --soft-fail
+                        echo "✅ tfsec OK!"
                     '''
                 }
             }
