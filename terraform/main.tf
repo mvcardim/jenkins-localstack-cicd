@@ -41,3 +41,46 @@ resource "aws_instance" "app_server" {
     Environment = "localstack"
   }
 }
+
+# IAM Role para Lambda
+resource "aws_iam_role" "lambda_exec" {
+  name = "lambda_exec_role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Action = "sts:AssumeRole"
+      Effect = "Allow"
+      Principal = {
+        Service = "lambda.amazonaws.com"
+      }
+    }]
+  })
+}
+
+# Zip do código da Lambda
+data "archive_file" "lambda_zip" {
+  type        = "zip"
+  source_file = "${path.module}/lambda_function.py"
+  output_path = "${path.module}/lambda_function.zip"
+}
+
+# Função Lambda
+resource "aws_lambda_function" "hello_world" {
+  filename         = data.archive_file.lambda_zip.output_path
+  function_name    = "hello_world_lambda"
+  role             = aws_iam_role.lambda_exec.arn
+  handler          = "lambda_function.lambda_handler"
+  runtime          = "python3.9"
+  source_code_hash = data.archive_file.lambda_zip.output_base64sha256
+
+  environment {
+    variables = {
+      ENV = "localstack"
+    }
+  }
+
+  tags = {
+    Environment = "localstack"
+  }
+}

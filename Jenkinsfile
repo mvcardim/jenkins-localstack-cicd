@@ -115,6 +115,9 @@ pipeline {
 
                     echo "=== Instâncias EC2 ==="
                     aws --endpoint-url=${LOCALSTACK_ENDPOINT} --profile localstack ec2 describe-instances --query 'Reservations[*].Instances[*].[InstanceId,State.Name,Tags[?Key==`Name`].Value|[0]]' --output table
+
+                    echo "=== Funções Lambda ==="
+                    aws --endpoint-url=${LOCALSTACK_ENDPOINT} --profile localstack lambda list-functions --query 'Functions[*].[FunctionName,Runtime,Handler]' --output table
                 '''
             }
         }
